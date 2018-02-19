@@ -5,12 +5,12 @@ var costoCarta=0;
 var costoStampa=0;
 var costoMateriali=0;
 var costoLavorazioni=0; // Costo altre lavorazioni
-var hStampa=20; // Altezza della stampa in cm (compresi bordi)
-var wStampa=10; // Larghezza della stampa in cm (compresi bordi)
+var hStampa=1; // Altezza della stampa in cm (compresi bordi)
+var wStampa=3; // Larghezza della stampa in cm (compresi bordi)
 //var areaStampa=hStampa*wStampa/10000; // Area della stampa in m2 (compresi bordi)
 var costoOrario=15; // Costo in euro per un ora di lavoro di un lavoratore
 var qtaProdotti=100; // Quantità di prodotti finali
-var carteDisponibili=[["patLuc_64x88",64,88,0.08]];
+var carteDisponibili=[["patLuc_64x88",5,3,0.08]];
 //var carteDisponibili=[["patLuc_70x100",70,100,0.09],["patLuc_64x88",64,88,0.08]]; // Dimensioni di carta disponibili [larghezza,altezza,costoFoglio]
 var coloriStampa=2; // Qta di colori che verranno stampati
 
@@ -23,17 +23,101 @@ function carta (type, grammatura, width, height, costoFoglio){
 	this.costoFoglio=costoFoglio;
 }
 var carte = [];
-carte["patLucida_64x88_170"]=new carta("patLucida",170,64,88,0.005); 
+carte.patLucida_64x88_170=new carta("patLucida",170,64,88,0.005); 
 
-// ---------- Calcolo Costo Stampa ------------
+
 function stampante (width, height, colors){
 	this.width=width;
 	this.height=height;
 	this.colors=colors;
 }
 var stampanti=[];
-stampanti["gto"]=new stampante(32,46,1);
-//var stampanti=[["gto",32,46,1],["gto2",36,52,2],["grande",50,70,1]];
+stampanti.gto=new stampante(32,46,1);
+stampanti.gto2=new stampante(36,52,2);
+stampanti.grande=new stampante(50,70,1);
+
+
+// --------------- Nuova Prova -----------------
+
+/*
+	Calcola quante copie del prodotto possono stare nel foglio
+	
+*/
+function contaCopie (wFoglio,hFoglio,wStampa,hStampa){
+	var dimWwHh=0; var dimWhHw=0;
+	if (hFoglio>= hStampa && wFoglio>=wStampa){
+		dimWwHh =Math.floor(hFoglio / hStampa) * Math.floor(wFoglio / wStampa);
+	}
+	if (hFoglio>= wStampa && wFoglio>=hStampa){
+		dimWhHw =Math.floor(hFoglio / wStampa) * Math.floor(wFoglio / hStampa);
+	}
+	return [dimWwHh,dimWhHw];
+}
+
+/*
+	Prova a dividere il foglio in modo da far uscire più prodotti possibile tagliando il foglio in meno parti possibile e controllando che ci stia nella stampante.
+*/
+function scegliCarta (){
+	"use strict";
+	var costoProdotto=1000; // Costo della carta nell'area occupata dal prodotto
+	var tipoCarta="";
+	for (var nomeCarta in carte) {
+		var carta= carte[nomeCarta]; 
+		var costoFoglio= carta.costoFoglio;
+		var wFoglio= 61; //carta.width; // dimensioni della carta in cm
+		var hFoglio= 44.5;//carta.height; // dimensioni della carta in cm
+		for (var nomeStampante in stampanti) {
+			var stampante= stampanti[nomeStampante];
+			var wStampante = stampante.width;
+			var hStampante = stampante.height;
+			wStampa=10;
+			hStampa=22;
+
+			var copie=contaCopie(wFoglio,hFoglio,wStampa,hStampa);
+			var maxCopie= Math.max(copie[0],copie[1]);
+
+
+			var exit=false; var i=1; var y=1;
+			var hCorr=hFoglio;
+			var wCorr=wFoglio;
+			var copieCorr=[0,0];
+			while (!exit){
+				var exit1=false;
+				y=1;
+				while (!exit1 && !exit){
+					hCorr=hFoglio/y;
+					wCorr= wFoglio/i;
+					//alert (hCorr + "-" +wCorr);
+					var t=0; var t1=0;
+					if ((hCorr<=hStampante && wCorr<=wStampante) || (hCorr<=wStampante && wCorr<=hStampante)){
+						copieCorr=contaCopie(wCorr,hCorr,wStampa,hStampa);
+						//alert (hCorr +"-" + copieCorr[0] + "-" +copieCorr[1]);
+						t=copieCorr[0]*i*y;
+						t1= copieCorr[1]*i*y;
+						if (t==maxCopie || t1==maxCopie)exit=true;
+					}
+					//alert (t + "-" + t1);
+					if (t==0 && t1==0)exit1=true;
+					y++;
+				}
+				i++;
+			}
+			alert (nomeStampante + "\nDimensione carta tagliata: " + hCorr + "-" +wCorr +"\n" + "Copie su carta tagliata: " + copieCorr[0] +"-" +copieCorr[1]);	
+		}
+		//var costoTemp = costoFoglio/Math.max(dim,dim1);
+		//tipoCarta= costoTemp<costoProdotto? carta[0]:tipoCarta;
+		//costoProdotto= costoTemp<costoProdotto? costoTemp : costoProdotto;
+	};
+	return [tipoCarta,costoProdotto * qtaProdotti];
+}
+
+var cartaScelta = scegliCarta();
+// ----------------------------------------------
+
+
+
+/* ---------- Calcolo Costo Stampa ------------
+
 
 // Cerco le combinazioni tra le carte e le dimensioni massime di stampa di ogni stampante
 for (var nomeCarta in carte) {
@@ -61,44 +145,13 @@ for (var nomeCarta in carte) {
 			dimWhHw = [hFoglio/Math.ceil(hFoglio / wStampante),wFoglio/Math.ceil(wFoglio / hStampante)];
 		}
 		
-		alert (nomeCarta + " su " + nomeStampante + " = " + dimWwHh[0] + "-" + dimWwHh[1]);
+		//alert (nomeCarta + " su " + nomeStampante + " = " + dimWwHh[0] + "-" + dimWwHh[1]);
 	};
 	
 };
 
 
-// --------------------------------------------
-
-
-// ---------- Calcolo Costo Carta ------------
-
-// Calcola di quanti fogli ho bisogno
-function scegliCarta (){
-	"use strict";
-	var costoProdotto=1000; // Costo della carta nell'area occupata dal prodotto
-	var tipoCarta="";
-	carteDisponibili.forEach(function(carta, index){ 
-		var costoFoglio= carta[3];
-		var hFoglio= carta[1]; // dimensioni della carta in cm
-		var wFoglio= carta[2]; // dimensioni della carta in cm
-		var dim=0; var dim1=0;
-		if (hFoglio>= hStampa && wFoglio>=wStampa){
-			dim =Math.floor(hFoglio / hStampa) * Math.floor(wFoglio / wStampa);
-		}
-		if (hFoglio>= wStampa && wFoglio>=hStampa){
-			dim1 =Math.floor(hFoglio / wStampa) * Math.floor(wFoglio / hStampa);
-		}
-		var costoTemp = costoFoglio/Math.max(dim,dim1);
-		tipoCarta= costoTemp<costoProdotto? carta[0]:tipoCarta;
-		costoProdotto= costoTemp<costoProdotto? costoTemp : costoProdotto;
-	});
-	return [tipoCarta,costoProdotto * qtaProdotti];
-}
-
-var cartaScelta = scegliCarta();
-//--------------------------------------------
-
-
+// -------------------------------------------- */
 
 
 costoTotale=costoCarta+costoLavorazioni+costoMateriali+costoStampa;
