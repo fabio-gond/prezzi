@@ -44,14 +44,18 @@ stampanti.grande=new stampante(50,70,1);
 	
 */
 function contaCopie (wFoglio,hFoglio,wStampa,hStampa){
-	var dimWwHh=0; var dimWhHw=0;
+	var copie=[];
 	if (hFoglio>= hStampa && wFoglio>=wStampa){
-		dimWwHh =Math.floor(hFoglio / hStampa) * Math.floor(wFoglio / wStampa);
+		copie.ww=Math.floor(wFoglio / wStampa);
+		copie.hh=Math.floor(hFoglio / hStampa);
+		copie.WwHh = copie.ww * copie.hh;
 	}
 	if (hFoglio>= wStampa && wFoglio>=hStampa){
-		dimWhHw =Math.floor(hFoglio / wStampa) * Math.floor(wFoglio / hStampa);
+		copie.wh=Math.floor(wFoglio / hStampa);
+		copie.hw=Math.floor(hFoglio / wStampa);
+		copie.WhHw = copie.wh * copie.hw;
 	}
-	return [dimWwHh,dimWhHw];
+	return copie;
 }
 
 /*
@@ -64,14 +68,14 @@ function scegliCarta (){
 	for (var nomeCarta in carte) {
 		var carta= carte[nomeCarta]; 
 		var costoFoglio= carta.costoFoglio;
-		var wFoglio= 61; //carta.width; // dimensioni della carta in cm
-		var hFoglio= 44.5;//carta.height; // dimensioni della carta in cm
+		var wFoglio= 6; //carta.width; // dimensioni della carta in cm
+		var hFoglio= 2;//carta.height; // dimensioni della carta in cm
 		for (var nomeStampante in stampanti) {
 			var stampante= stampanti[nomeStampante];
-			var wStampante = stampante.width;
-			var hStampante = stampante.height;
-			wStampa=10;
-			hStampa=22;
+			var wStampante = 5//stampante.width;
+			var hStampante = 2//stampante.height;
+			wStampa=2.5;
+			hStampa=2;
 
 			var copie=contaCopie(wFoglio,hFoglio,wStampa,hStampa);
 			var maxCopie= Math.max(copie[0],copie[1]);
@@ -80,7 +84,7 @@ function scegliCarta (){
 			var exit=false; var i=1; var y=1;
 			var hCorr=hFoglio;
 			var wCorr=wFoglio;
-			var copieCorr=[0,0];
+			var copieCorr=[];
 			while (!exit){
 				var exit1=false;
 				y=1;
@@ -88,13 +92,22 @@ function scegliCarta (){
 					hCorr=hFoglio/y;
 					wCorr= wFoglio/i;
 					//alert (hCorr + "-" +wCorr);
-					var t=0; var t1=0;
+					copieCorr=contaCopie(wCorr,hCorr,wStampa,hStampa);
+					
+					var copieTotWwHh=copieCorr.WwHh*i*y; // Quante copie in totale verrebbero per foglio
+					var copieTotWhHw= copieCorr.WhHw*i*y; // Quante copie in totale verrebbero per foglio
+					//alert (hCorr +"-" + copieCorr[0] + "-" +copieCorr[1]);
 					if ((hCorr<=hStampante && wCorr<=wStampante) || (hCorr<=wStampante && wCorr<=hStampante)){
-						copieCorr=contaCopie(wCorr,hCorr,wStampa,hStampa);
-						//alert (hCorr +"-" + copieCorr[0] + "-" +copieCorr[1]);
-						t=copieCorr[0]*i*y;
-						t1= copieCorr[1]*i*y;
-						if (t==maxCopie || t1==maxCopie)exit=true;
+						if (copieTotWwHh==maxCopie || copieTotWhHw==maxCopie)exit=true;
+					}else{
+						 if (copieTotWwHh==maxCopie){
+							 var tW=0; var tH=0;
+							 tW=copie.ww*wStampa;
+							 tH=copie.hh*hStampa;
+							 if (contaCopie(tW,tH,wStampante,hStampante)>=1){
+								 alert ("ok");
+							 }
+						 }
 					}
 					//alert (t + "-" + t1);
 					if (t==0 && t1==0)exit1=true;
