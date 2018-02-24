@@ -8,10 +8,10 @@ var costoLavorazioni=0; // Costo altre lavorazioni
 var hStampa=1; // Altezza della stampa in cm (compresi bordi)
 var wStampa=3; // Larghezza della stampa in cm (compresi bordi)
 //var areaStampa=hStampa*wStampa/10000; // Area della stampa in m2 (compresi bordi)
-var costoOrario=15; // Costo in euro per un ora di lavoro di un lavoratore
-var qtaProdotti=100; // Quantità di prodotti finali
+var costoOrario=13; // Costo in euro per un ora di lavoro di un lavoratore
+var qtaProdotti=10000; // Quantità di prodotti finali
 
-var coloriStampa=2; // Qta di colori che verranno stampati
+var coloriStampa=4; // Qta di colori che verranno stampati
 
 
 // ------------------------------   DEFINIZIONE CARTE, STAMPANTI ---  //
@@ -24,17 +24,19 @@ function carta (type, grammatura, width, height, costoFoglio){
 }
 var carte = [];
 carte.patLucida_64x88_170=new carta("patLucida",170,64,88,0.005); 
+carte.patLucida_70x100_170=new carta("patLucida",170,70,100,0.006); 
 
 
-function stampante (width, height, colors){
+function stampante (width, height, passaggiOra, colors){
 	this.width=width;
 	this.height=height;
 	this.colors=colors;
+	this.passaggiOra=passaggiOra;
 }
 var stampanti=[];
-stampanti.gto=new stampante(32,46,1);
-//stampanti.gto2=new stampante(36,52,2);
-//stampanti.grande=new stampante(50,70,1);
+stampanti.gto=new stampante(32,46,1000,1);
+//stampanti.gto2=new stampante(36,52,1000,2);
+//stampanti.grande=new stampante(50,70,1000,1);
 
 // --------------------------------------------------------------
 
@@ -52,7 +54,7 @@ function contaCopie (wFoglio,hFoglio,wStampa,hStampa){
 	var copie=[];
 	copie.ww=0;copie.wh=0;copie.hh=0;copie.hw=0;copie.WwHh=0;copie.WhHw=0;
 	if (hFoglio>= hStampa && wFoglio>=wStampa){
-		copie.ww=Math.floor(wFoglio / wStampa);
+		copie.ww=Math.floor(wFoglio / wStampa); 
 		copie.hh=Math.floor(hFoglio / hStampa);
 		copie.WwHh = copie.ww * copie.hh;
 	}
@@ -65,12 +67,36 @@ function contaCopie (wFoglio,hFoglio,wStampa,hStampa){
 }
 
 /*
-	Calcola se il foglio in questa posizione passa nella stampante
-	@return n: non passa; w:passa in orizzontale; h:passa in verticale; 
+	Calcola se il foglio in questa posizione passa nella stampante 
 */
 function staDentro (wFoglio,hFoglio,wStampa,hStampa){
 	if (hFoglio>= hStampa && wFoglio>=wStampa)return true;
 	return false;
+}
+
+// Calcola Costo Stampa 
+
+function calcolaStampa (stampante,copiePerFoglio){
+	var passaggi=Math.ceil(qtaProdotti/copiePerFoglio);
+	var tempoStampa= (passaggi/stampante.passaggiOra) * Math.ceil(coloriStampa/stampante.colors);
+	var avviamento1Col= 15/60; // Tempo per avviamento 1col in ore
+	var avviamento2Col= 40/60; // Tempo per avviamento 2col in ore
+	var cambio1Col=20/60; // Tempo per cambiare un colore e rifare avviamento
+	var cambio2Col=35/60; // Tempo per cambiare un colore e rifare avviamento
+	var avviamento=avviamento1Col;;
+	var cambi1col=0; var cambi2col=0;
+	
+	if(coloriStampa>=2){
+		if (stampante.colors==1){
+			cambi1col=coloriStampa-1;
+		} else {
+			avviamento=avviamento2Col;
+			cambi2col=Math.floor((coloriStampa-2)/2); 
+			cambi1col=Math.floor((coloriStampa-2)%2); 
+		}
+	}
+	var tempoTot= avviamento + tempoStampa + cambi1col * cambio1Col + cambi2col * cambio2Col;
+	return tempoTot; // * costoOrario;
 }
 
 /*
@@ -83,30 +109,31 @@ function scegliCarta (){
 	for (var nomeCarta in carte) {
 		var carta= carte[nomeCarta]; 
 		var costoFoglio= carta.costoFoglio;
-		var wFoglio= 2.2; //carta.width; // dimensioni della carta in cm
-		var hFoglio= 6;//carta.height; // dimensioni della carta in cm
+		var wFoglio= carta.width; // dimensioni della carta in cm
+		var hFoglio= carta.height; // dimensioni della carta in cm
 		for (var nomeStampante in stampanti) {
 			var stampante= stampanti[nomeStampante];
-			var wStampante = 5//stampante.width;
-			var hStampante = 2//stampante.height;
-			wStampa=2.5;
-			hStampa=2;
+			var wStampante = stampante.width;
+			var hStampante = stampante.height;
+			wStampa=21;
+			hStampa=29.7;
 
 			var copie=contaCopie(wFoglio,hFoglio,wStampa,hStampa);
-			var maxCopie= Math.max(copie.WwHh,copie.WhHw);
+			var maxCopie= Math.max(copie.WwHh,copie.WhHw); // Massimo numero di copie che possono uscire dal foglio
 
 
-			var exit=false; var i=1; var y=1;
+			var exit=false; var i=0; var y=0;
 			var hCorr=hFoglio;
 			var wCorr=wFoglio;
 			var copieCorr=[];
-			while (!exit){
+			while (!exit){  // Ciclo per divisioni su h
 				var exit1=false;
-				y=1;
-				while (!exit1 && !exit){
+				y=0;
+				i++;
+				while (!exit1 && !exit){ // Ciclo per divisioni su w
+					y++;
 					hCorr=hFoglio/y;
 					wCorr= wFoglio/i;
-					//alert (hCorr + "-" +wCorr);
 					copieCorr=contaCopie(wCorr,hCorr,wStampa,hStampa);
 					
 					var copieTotWwHh=copieCorr.WwHh*i*y; // Quante copie in totale verrebbero per foglio
@@ -127,7 +154,7 @@ function scegliCarta (){
 							if (hCorr>hStampante && hStampante>=copie.hh*hStampa){
 								hCorr=hStampante;
 							}
-							if (staDentro(wStampante,hStampante,wCorr,hCorr) )alert ("A" + wCorr + "-" +hCorr +" | Divisioni: " + i +"-" + y);
+							if (staDentro(wStampante,hStampante,wCorr,hCorr) )exit=true;
 						}
 						
 						if (staDentro(hStampante,wStampante,wCorr,hCorr) ){ // Ci passa con stampante in verticale?
@@ -139,7 +166,7 @@ function scegliCarta (){
 							if (hCorr>wStampante && wStampante>=copie.hh*hStampa){
 								hCorr=wStampante;
 							}
-							if (staDentro(wStampante,hStampante,hCorr,wCorr) )alert ("B" + wCorr + "-" +hCorr +" | Divisioni: " + i +"-" + y);
+							if (staDentro(wStampante,hStampante,hCorr,wCorr) )exit=true;
 						}
 					}
 					
@@ -153,7 +180,7 @@ function scegliCarta (){
 							if (hCorr>hStampante && hStampante>=copie.hw*wStampa){
 								hCorr=hStampante;
 							}
-							if (staDentro(wStampante,hStampante,wCorr,hCorr) )alert ("C" + wCorr + "-" +hCorr +" | Divisioni: " + i +"-" + y);
+							if (staDentro(wStampante,hStampante,wCorr,hCorr) )exit=true;
 						}
 						
 						if (staDentro(hStampante,wStampante,wCorr,hCorr) ){ // Ci passa con stampante in verticale?
@@ -165,16 +192,16 @@ function scegliCarta (){
 							if (hCorr>wStampante && wStampante>=copie.hw*wStampa){
 								hCorr=wStampante;
 							}
-							if (staDentro(wStampante,hStampante,hCorr,wCorr) )alert ("D" + wCorr + "-" +hCorr +" | Divisioni: " + i +"-" + y);
+							if (staDentro(wStampante,hStampante,hCorr,wCorr) )exit=true;
 						}
 					}
 					//alert (t + "-" + t1);
-					if (t==0 && t1==0)exit1=true;
-					y++;
+					if (!staDentro(wCorr,hCorr,wStampa,hStampa))exit1=true;
 				}
-				i++;
 			}
-			alert (nomeStampante + "\nDimensione carta tagliata: " + hCorr + "-" +wCorr +"\n" + "Copie su carta tagliata: " + copieCorr[0] +"-" +copieCorr[1]);	
+			var copiePerFoglio=Math.max(copieCorr.WwHh,copieCorr.WhHw);
+			alert (nomeCarta +"-" +nomeStampante + "\nDimensione carta tagliata: " + hCorr + "-" +wCorr +"\nTagliare in " + i + " parti in orizzontale e in " + y + " parti in verticale" + "\nCopie su carta tagliata: " + Math.max(copieCorr.WwHh,copieCorr.WhHw));
+			alert (nomeCarta +"-" +nomeStampante + "\nCosto carta: " + Math.ceil(qtaProdotti/maxCopie)*carta.costoFoglio + "\nTempo Stampa: " + calcolaStampa(stampante,copiePerFoglio))
 		}
 		//var costoTemp = costoFoglio/Math.max(dim,dim1);
 		//tipoCarta= costoTemp<costoProdotto? carta[0]:tipoCarta;
@@ -188,42 +215,7 @@ var cartaScelta = scegliCarta();
 
 
 
-/* ---------- Calcolo Costo Stampa ------------
 
-
-// Cerco le combinazioni tra le carte e le dimensioni massime di stampa di ogni stampante
-for (var nomeCarta in carte) {
-	var carta= carte[nomeCarta];
-	var costoFoglio= carta.costoFoglio;
-	var hFoglio= carta.height; // dimensioni della carta in cm
-	var wFoglio= carta.width; // dimensioni della carta in cm
-	
-	for (var nomeStampante in stampanti) {
-		var stampante= stampanti[nomeStampante];
-		var hStampante=stampante.height; // altezza max di stampa
-		var wStampante=stampante.width; // larghezza max di stampa
-		var colors=stampante.colors;
-		var passaggiWwHh=0; // passaggi di stampa dividendo w/w h/h
-		var dimWwHh;	// dim foglio ritagliato dividendo w/w h/h
-		var passaggiWhHw=0; // passaggi di stampa dividendo w/h h/w
-		var dimWhHw;	// dim foglio ritagliato dividendo w/h h/w
-		
-		if (hFoglio>= hStampante && wFoglio>=wStampante){
-			passaggiWwHh =Math.ceil(hFoglio / hStampante) * Math.ceil(wFoglio / wStampante);
-			dimWwHh= [hFoglio/Math.ceil(hFoglio / hStampante),wFoglio/Math.ceil(wFoglio / wStampante)];
-		}
-		if (hFoglio>= wStampante && wFoglio>=hStampante){
-			passaggiWhHw =Math.ceil(hFoglio / wStampante) * Math.ceil(wFoglio / hStampante);
-			dimWhHw = [hFoglio/Math.ceil(hFoglio / wStampante),wFoglio/Math.ceil(wFoglio / hStampante)];
-		}
-		
-		//alert (nomeCarta + " su " + nomeStampante + " = " + dimWwHh[0] + "-" + dimWwHh[1]);
-	};
-	
-};
-
-
-// -------------------------------------------- */
 
 
 costoTotale=costoCarta+costoLavorazioni+costoMateriali+costoStampa;
