@@ -15,26 +15,31 @@ var coloriStampa=4; // Qta di colori che verranno stampati
 
 
 // ------------------------------   DEFINIZIONE CARTE, STAMPANTI ---  //
-function carta (type, grammatura, width, height, costoFoglio){
+var Size = function(width,height){
+	this.w=width;
+	this.h=height;
+};
+
+var Carta = function(type, grammatura, width, height, costoFoglio){
 	this.type=type;
 	this.grammatura=grammatura;
-	this.width=width;
-	this.height=height;
+	this.size=new Size(width,height);
 	this.costoFoglio=costoFoglio;
-}
+};
 var carte = [];
-carte.patLucida_64x88_170=new carta("patLucida",170,64,88,0.005); 
-carte.patLucida_70x100_170=new carta("patLucida",170,70,100,0.006); 
+carte.patLucida_64x88_170=new Carta("patLucida",170,64,88,0.005); 
+carte.patLucida_70x100_170=new Carta("patLucida",170,70,100,0.006); 
 
+alert (carte.patLucida_64x88_170.size.w);
+throw new Error("Something went badly wrong!");
 
-function stampante (width, height, passaggiOra, colors){
-	this.width=width;
-	this.height=height;
+var Stampante=function (maxWidth, maxHeight, passaggiOra, colors){
+	this.size=new Size(maxWidth,maxHeight);
 	this.colors=colors;
 	this.passaggiOra=passaggiOra;
-}
+};
 var stampanti=[];
-stampanti.gto=new stampante(32,46,1000,1);
+stampanti.gto=new Stampante(32,46,1000,1);
 //stampanti.gto2=new stampante(36,52,1000,2);
 //stampanti.grande=new stampante(50,70,1000,1);
 
